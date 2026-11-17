@@ -1,0 +1,27 @@
+// OrderLoop: DAX measures on top of the PostgreSQL views (Import mode).
+// Tables: o2c_orders, o2c_open_receivables, o2c_dso, customers, sync_runs. See powerbi/README.md.
+
+Orders = COUNTROWS ( o2c_orders )
+Order Value = SUM ( o2c_orders[net_amount] )
+Paid Orders = CALCULATE ( [Orders], o2c_orders[stage] = "paid" )
+Paid Share = DIVIDE ( [Paid Orders], CALCULATE ( [Orders], o2c_orders[stage] <> "cancelled" ) )
+
+Avg Days to Deliver = AVERAGE ( o2c_orders[days_to_deliver] )
+Avg Days to Invoice = AVERAGE ( o2c_orders[days_to_invoice] )
+Avg Days to Pay = AVERAGE ( o2c_orders[days_to_pay] )
+Order-to-Cash Days = [Avg Days to Deliver] + [Avg Days to Invoice] + [Avg Days to Pay]
+
+On-time Delivery =
+DIVIDE (
+    CALCULATE ( [Orders], o2c_orders[on_time] = TRUE () ),
+    CALCULATE ( [Orders], NOT ISBLANK ( o2c_orders[delivered_on] ) )
+)
+
+Open Receivables = SUM ( o2c_open_receivables[amount] )
+Overdue Receivables = CALCULATE ( [Open Receivables], o2c_open_receivables[days_overdue] > 0 )
+Overdue Share = DIVIDE ( [Overdue Receivables], [Open Receivables] )
+DSO (90 d) = MAX ( o2c_dso[dso_days] )
+
+// Sort o2c_open_receivables[bucket] with this column (Column tools → Sort by column)
+Bucket Order =
+SWITCH ( o2c_open_receivables[bucket], "not due", 0, "1-30", 1, "31-60", 2, "61-90", 3, "90+", 4 )

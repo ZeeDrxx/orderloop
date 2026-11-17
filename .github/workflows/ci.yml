@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_DB: orderloop, POSTGRES_USER: orderloop, POSTGRES_PASSWORD: orderloop }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U orderloop" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://orderloop:orderloop@localhost:5432/orderloop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test          # OData client, mock SAP, sync against PostgreSQL, Functions handler
+      - run: npm run build
+      - name: Functions bundle
+        working-directory: functions
+        run: npm ci && npm run build && node -e "import('./dist/index.js')"
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stack smoke test (mock SAP → sync → dashboard)
+        run: |
+          docker compose up -d --build --wait
+          sleep 10
+          curl -sf localhost:3000/api/health
+          curl -sf -X POST -H "Authorization: Bearer local-sync-token-change-me" localhost:3000/api/sync | grep -q '"ok":true'
+          curl -sf localhost:3000/ | grep -q "Days sales outstanding"
+      - if: failure()
+        run: docker compose logs

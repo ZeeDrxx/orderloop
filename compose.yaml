@@ -1,0 +1,39 @@
+# Local stack: PostgreSQL + mock SAP OData server + dashboard (http://localhost:3000)
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: orderloop
+      POSTGRES_USER: orderloop
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orderloop}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["127.0.0.1:5432:5432"]   # Power BI Desktop / psql on this machine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderloop -d orderloop"]
+      interval: 5s
+      retries: 10
+
+  mock-sap:
+    build: .
+    image: orderloop
+    command: ["node", "mock-sap/server.ts"]
+    environment:
+      PORT: "4004"
+      MOCK_TODAY: ${MOCK_TODAY:-}
+    ports: ["127.0.0.1:4004:4004"]
+
+  web:
+    image: orderloop
+    depends_on:
+      postgres: { condition: service_healthy }
+      mock-sap: { condition: service_started }
+    environment:
+      DATABASE_URL: postgres://orderloop:${POSTGRES_PASSWORD:-orderloop}@postgres:5432/orderloop
+      SAP_BASE_URL: ${SAP_BASE_URL:-http://mock-sap:4004/sap/opu/odata/sap}
+      SAP_API_KEY: ${SAP_API_KEY:-}
+      SYNC_TOKEN: ${SYNC_TOKEN:-local-sync-token-change-me}
+      SYNC_ON_START: "1"
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:

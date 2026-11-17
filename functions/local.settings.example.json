@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "SYNC_SCHEDULE": "0 */15 * * * *",
+    "DATABASE_URL": "postgres://orderloop:orderloop@localhost:5432/orderloop",
+    "SAP_BASE_URL": "http://localhost:4004/sap/opu/odata/sap",
+    "SAP_API_KEY": ""
+  }
+}

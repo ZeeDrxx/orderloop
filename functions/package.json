@@ -1,0 +1,19 @@
+{
+  "name": "orderloop-functions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Azure Functions (v4, Node): scheduled SAP → PostgreSQL sync for OrderLoop.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.js --external:@azure/functions --external:pg-native --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
+    "start": "npm run build && func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.17.1",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
